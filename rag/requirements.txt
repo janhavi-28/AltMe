@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+google-generativeai
+PyMuPDF
+PyYAML
+requests
+supabase
+python-dotenv
+tiktoken
+reportlab

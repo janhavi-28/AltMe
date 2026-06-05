@@ -1,0 +1,83 @@
+name: "Janhavi Sachin Kolekar"
+role: "AI / ML Engineer • GenAI & LLM Applications"
+email: "janhavikolekar280@gmail.com"
+github: "janhavi-28"
+location: "India"
+
+skills:
+  - "Python (OOP, Web Scraping)"
+  - "SQL"
+  - "LangGraph & LangChain"
+  - "Agentic AI & Multi-Agent Workflows"
+  - "RAG & Vector Embeddings (FAISS, pgvector)"
+  - "Prompt Engineering (CoT, Few-Shot, ReAct)"
+  - "TensorFlow, PyTorch, Keras"
+  - "FastAPI & REST APIs"
+  - "Streamlit"
+  - "Gemini API, OpenAI API, Claude API"
+  - "Supabase, Vector Databases"
+  - "Next.js"
+  - "Vapi.ai, Voice Agents"
+
+experience:
+  - role: "AI Engineer Intern"
+    company: "A2gent"
+    description: >
+      Shipped multi-agent workflows for finance-domain automation.
+      Deployed web scraping pipelines on Streamlit Cloud.
+      Built LangGraph-based agentic systems for real-world finance tasks.
+
+  - role: "AI Engineer Intern"
+    company: "Swatah.ai"
+    description: >
+      Implemented usage-based monetization for ONNX models on edge devices.
+      Used Flask and OpenSSL for secure model deployment.
+      Worked on AI inference optimization for production edge environments.
+
+projects:
+  - name: "AltMe"
+    description: >
+      AI persona system built for the Scaler AI Engineer screening assignment.
+      Full-stack system with a RAG-grounded voice agent (Vapi + Gemini + ElevenLabs)
+      and a chat interface (Next.js + Vercel). Ingests resume, GitHub READMEs, and
+      bio into Supabase pgvector. Books real interviews via Cal.com API.
+    stack: "FastAPI, Gemini 2.5 Flash, Supabase pgvector, Next.js, Vapi.ai, ElevenLabs, Deepgram, Cal.com"
+
+  - name: "Financial Deep Research Agent"
+    description: >
+      Autonomous LLM tool-calling agent using LangGraph, FAISS, and SerpAPI.
+      Generates investment-grade research reports with multi-step reasoning.
+      Agent autonomously decides which tools to call and synthesizes findings.
+    stack: "LangGraph, FAISS, SerpAPI, Python, LangChain"
+
+  - name: "Finance PPT Maker"
+    description: >
+      AI-powered presentation generator supporting multi-LLM backends
+      including OpenAI, Gemini, and Claude. Cuts financial report creation
+      time by approximately 80% through automated slide generation.
+    stack: "OpenAI API, Gemini API, Claude API, Python, Streamlit"
+
+  - name: "RAG-CHAT Research Agent"
+    description: >
+      Hybrid retrieval pipeline combining PyPDF2 and web scraping with
+      Google Gemini for document-grounded question answering.
+      Supports both uploaded documents and live web content as knowledge sources.
+    stack: "Google Gemini, PyPDF2, LangChain, Streamlit, Python"
+
+fit_for_role: >
+  Janhavi is an AI Engineer with hands-on experience building and shipping
+  end-to-end Generative AI products — from RAG pipelines and multi-agent
+  workflows to production-ready voice agents and chat applications.
+  She is comfortable owning the full product lifecycle: research, prototyping,
+  deployment, and iteration. She built AltMe — a fully functional AI persona
+  system with voice, chat, calendar booking, RAG grounding, and evals —
+  as a direct demonstration of her fit for this role at Scaler.
+  She has experience with LangGraph, LangChain, FastAPI, Gemini, Supabase,
+  Vapi, and Next.js. She has shipped real products at two AI startups as an intern.
+
+why_scaler: >
+  Scaler is building tools that help developers level up technically.
+  Janhavi wants to work on AI systems that have real educational impact at scale.
+  Her background in agentic AI, RAG systems, and LLM applications maps directly
+  to the kind of AI Engineer work Scaler needs. She learns fast, ships faster,
+  and has already proven it by building AltMe end to end in under 48 hours.

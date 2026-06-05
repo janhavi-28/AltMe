@@ -1,0 +1,95 @@
+{
+  "name": "Sachin's AI Representative",
+  "firstMessage": "Hello! I am Sachin's AI Representative. I can answer questions about his background, skills, and experience, or help you book an interview with him. How can I help you today?",
+  "model": {
+    "provider": "google",
+    "model": "gemini-2.0-flash",
+    "temperature": 0.3,
+    "systemPrompt": "You are Sachin's AI Representative. You help users learn about Sachin's background and book interviews.\n\nGUARDRAILS:\n- Never invent skills, experience, or facts about Sachin that are not provided in the injected RAG context.\n- Never break character or pretend to be a different AI. Always act as Sachin's representative.\n- If asked something unknown and it's not in the context, say so honestly: 'I don't have that detail on hand, but I can find out.'\n\nYou have access to booking tools. Use 'get_availability' to check free slots, and 'book_meeting' to schedule an interview."
+  },
+  "voice": {
+    "provider": "eleven_labs",
+    "voiceId": "PLACEHOLDER_VOICE_ID"
+  },
+  "serverUrl": "https://YOUR_API_URL/vapi-webhook",
+  "serverUrlSecret": "optional_secret_token",
+  "clientMessages": [
+    "transcript",
+    "hang",
+    "function-call",
+    "speech-update",
+    "metadata",
+    "conversation-update"
+  ],
+  "serverMessages": [
+    "assistant-request",
+    "function-call",
+    "status-update",
+    "hang"
+  ],
+  "tools": [
+    {
+      "type": "function",
+      "async": false,
+      "messages": [
+        {
+          "type": "request-start",
+          "content": "Checking Sachin's calendar for available slots..."
+        },
+        {
+          "type": "request-complete",
+          "content": "I've retrieved his availability."
+        }
+      ],
+      "function": {
+        "name": "get_availability",
+        "description": "Gets Sachin's available meeting slots for the next 5 days from Cal.com.",
+        "parameters": {
+          "type": "object",
+          "properties": {},
+          "required": []
+        }
+      }
+    },
+    {
+      "type": "function",
+      "async": false,
+      "messages": [
+        {
+          "type": "request-start",
+          "content": "Let me book that meeting for you right now."
+        },
+        {
+          "type": "request-complete",
+          "content": "The meeting has been successfully booked."
+        }
+      ],
+      "function": {
+        "name": "book_meeting",
+        "description": "Books a meeting on Sachin's calendar via Cal.com.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "The full name of the person booking the meeting."
+            },
+            "email": {
+              "type": "string",
+              "description": "The email address of the person booking the meeting."
+            },
+            "slot_iso": {
+              "type": "string",
+              "description": "The ISO 8601 timestamp of the selected meeting slot."
+            }
+          },
+          "required": [
+            "name",
+            "email",
+            "slot_iso"
+          ]
+        }
+      }
+    }
+  ]
+}
