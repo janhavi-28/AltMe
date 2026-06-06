@@ -14,7 +14,7 @@ def query_rag(question: str) -> Dict[str, Any]:
     # 1. Embed the question
     try:
         response = genai.embed_content(
-            model="models/text-embedding-004",
+            model="models/gemini-embedding-2",
             content=question,
             task_type="retrieval_query"
         )

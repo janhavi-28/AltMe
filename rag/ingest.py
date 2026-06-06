@@ -153,10 +153,10 @@ def embed_and_store(docs: List[Dict[str, Any]]):
     # The generativeai SDK supports batching by passing a list of texts
     texts = [doc["text"] for doc in docs]
     
-    # Use text-embedding-004
+    # Use gemini-embedding-2
     try:
         response = genai.embed_content(
-            model="models/text-embedding-004",
+            model="models/gemini-embedding-2",
             content=texts,
             task_type="retrieval_document"
         )
