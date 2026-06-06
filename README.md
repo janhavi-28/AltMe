@@ -335,6 +335,6 @@ Every voice turn triggers a fresh RAG lookup. Context is injected into the syste
 [![Email](https://img.shields.io/badge/Email-janhavikolekar280%40gmail.com-EA4335?style=flat-square&logo=gmail)](mailto:janhavikolekar280@gmail.com)
 [![GitHub](https://img.shields.io/badge/GitHub-janhavi--28-181717?style=flat-square&logo=github)](https://github.com/janhavi-28)
 
-*Built in under 48 hours for the Scaler AI Engineer Screening Assignment*
+
 
 </div>
