@@ -126,7 +126,7 @@ export default function ChatPage() {
         
         {/* Header */}
         <div className="bg-blue-600 text-white p-4 font-semibold shadow-sm text-center">
-          Sachin's AI Representative
+          Janhavi's AI Representative
         </div>
 
         {/* Chat Area */}

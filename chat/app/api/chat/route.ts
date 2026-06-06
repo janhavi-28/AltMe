@@ -25,7 +25,7 @@ export async function POST(req: Request) {
     const isInjected = PROMPT_INJECTION_KEYWORDS.some(keyword => lowerMessage.includes(keyword));
     
     if (isInjected) {
-      return new Response("I'm Sachin's AI rep and I'll stay that way 😊", {
+      return new Response("I'm Janhavi's AI rep and I'll stay that way 😊", {
         headers: {
           "Content-Type": "text/plain",
           "X-Sources": JSON.stringify([])
@@ -57,7 +57,7 @@ export async function POST(req: Request) {
     }
 
     // 3. Build System Prompt & Call Gemini
-    const systemPrompt = `You are Sachin's AI representative. Answer only using the context below. If the answer isn't in the context, say so. Never hallucinate. 
+    const systemPrompt = `You are Janhavi's AI representative. Answer only using the context below. If the answer isn't in the context, say so. Never hallucinate. 
     
 Context from knowledge base:
 ${ragResultText}`;
