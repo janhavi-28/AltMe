@@ -81,7 +81,7 @@ ${ragResultText}`;
     const stream = new ReadableStream({
       async start(controller) {
         try {
-          for await (const chunk of resultStream) {
+          for await (const chunk of resultStream.stream) {
             const chunkText = chunk.text();
             if (chunkText) {
               controller.enqueue(new TextEncoder().encode(chunkText));
