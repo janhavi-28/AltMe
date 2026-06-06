@@ -7,8 +7,8 @@ import os
 # Ensure the parent directory is in sys.path so we can run this directly if needed
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from rag.ingest import run_ingest_pipeline
-from rag.retrieve import query_rag
+from ingest import run_ingest_pipeline
+from retrieve import query_rag
 
 app = FastAPI(
     title="RAG Pipeline API",
@@ -45,7 +45,7 @@ def ingest_endpoint():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Ingestion failed: {str(e)}")
 
-from rag.vapi.cal_functions import get_availability, book_meeting
+from vapi.cal_functions import get_availability, book_meeting
 
 class BookMeetingRequest(BaseModel):
     name: str
@@ -80,4 +80,4 @@ async def vapi_webhook(payload: dict):
 
 if __name__ == "__main__":
     # Run the server locally
-    uvicorn.run("rag.main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
