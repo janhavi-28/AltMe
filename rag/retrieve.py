@@ -88,9 +88,9 @@ QUESTION:
 ANSWER:
 """
 
-    # 4. Generate answer using Gemini 2.0 Flash
+    # 4. Generate answer using Gemini 2.5 Flash
     try:
-        model = genai.GenerativeModel("gemini-2.0-flash")
+        model = genai.GenerativeModel("gemini-2.5-flash")
         response = model.generate_content(prompt)
         answer = response.text
     except Exception as e:
