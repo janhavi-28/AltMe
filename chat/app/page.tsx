@@ -121,29 +121,53 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
-      <div className="w-full max-w-2xl bg-white rounded-xl shadow-lg flex flex-col h-[80vh] overflow-hidden border border-gray-200">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 flex flex-col items-center justify-center p-4 sm:p-6 md:p-8">
+      
+      {/* Background decorations */}
+      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-indigo-600/20 blur-[120px]"></div>
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-purple-600/20 blur-[120px]"></div>
+      </div>
+
+      <div className="w-full max-w-3xl bg-white/10 backdrop-blur-2xl rounded-3xl shadow-[0_8px_32px_0_rgba(0,0,0,0.36)] flex flex-col h-[85vh] overflow-hidden border border-white/10 relative z-10 transition-all duration-300">
         
         {/* Header */}
-        <div className="bg-blue-600 text-white p-4 font-semibold shadow-sm text-center">
-          Janhavi's AI Representative
+        <div className="bg-white/5 border-b border-white/10 p-5 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold text-lg shadow-lg">
+                J
+              </div>
+              <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-400 border-2 border-indigo-950 rounded-full"></div>
+            </div>
+            <div>
+              <h1 className="text-white font-semibold tracking-wide text-lg">Janhavi's AI Representative</h1>
+              <p className="text-indigo-200/70 text-xs font-medium">Always online</p>
+            </div>
+          </div>
         </div>
 
         {/* Chat Area */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
           {messages.length === 0 && (
-            <div className="text-center text-gray-400 mt-10">
-              <p>Say hello! You can ask about my skills, projects, or book a call.</p>
+            <div className="flex flex-col items-center justify-center h-full text-center space-y-4 animate-fade-in-up">
+              <div className="w-20 h-20 rounded-full bg-indigo-500/20 flex items-center justify-center mb-2">
+                <span className="text-4xl">✨</span>
+              </div>
+              <h2 className="text-2xl font-bold text-white tracking-tight">Say Hello!</h2>
+              <p className="text-indigo-200/80 max-w-md">
+                I'm Janhavi's AI assistant. You can ask me about her skills, experience, recent projects, or even book a quick call.
+              </p>
             </div>
           )}
 
           {messages.map((m, idx) => (
-            <div key={idx} className={`flex flex-col ${m.role === "user" ? "items-end" : "items-start"}`}>
+            <div key={idx} className={`flex flex-col ${m.role === "user" ? "items-end" : "items-start"} animate-fade-in`}>
               <div
-                className={`max-w-[80%] px-4 py-2 rounded-2xl ${
+                className={`max-w-[85%] px-5 py-3.5 rounded-2xl text-[15px] leading-relaxed shadow-sm ${
                   m.role === "user" 
-                  ? "bg-blue-500 text-white rounded-br-none" 
-                  : "bg-gray-100 text-gray-800 rounded-bl-none"
+                  ? "bg-gradient-to-r from-indigo-500 to-indigo-600 text-white rounded-br-sm" 
+                  : "bg-white/10 text-gray-100 rounded-bl-sm border border-white/5"
                 }`}
                 style={{ whiteSpace: "pre-wrap" }}
               >
@@ -155,12 +179,12 @@ export default function ChatPage() {
 
               {/* Booking Button Injection */}
               {m.role === "assistant" && shouldShowBooking(m.content) && idx === messages.length - 1 && !isLoading && (
-                <div className="mt-3">
+                <div className="mt-4 animate-bounce-in">
                   <button 
                     onClick={() => setShowCalendar(!showCalendar)}
-                    className="bg-black text-white text-sm px-4 py-2 rounded-lg hover:bg-gray-800 transition"
+                    className="bg-white/10 hover:bg-white/20 text-white border border-white/20 text-sm px-5 py-2.5 rounded-xl font-medium transition-all duration-200 flex items-center gap-2"
                   >
-                    {showCalendar ? "Close Calendar" : "📅 Book a Call"}
+                    <span>{showCalendar ? "✕ Close Calendar" : "📅 Find a Time"}</span>
                   </button>
                 </div>
               )}
@@ -169,7 +193,7 @@ export default function ChatPage() {
 
           {/* Cal.com Inline Embed */}
           {showCalendar && (
-            <div className="w-full h-[400px] mt-4 border border-gray-200 rounded-lg overflow-hidden">
+            <div className="w-full h-[450px] mt-4 border border-white/10 rounded-2xl overflow-hidden bg-white/5 animate-fade-in">
               <iframe 
                 src={process.env.NEXT_PUBLIC_CAL_URL || "https://cal.com/janhavi-kolekar/interview"} 
                 className="w-full h-full"
@@ -179,29 +203,42 @@ export default function ChatPage() {
           )}
 
           {isLoading && (
-            <div className="text-gray-400 text-sm animate-pulse ml-2">Typing...</div>
+            <div className="flex items-start gap-2 text-indigo-200/60 text-sm pl-2">
+              <div className="flex space-x-1 mt-1.5">
+                <div className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                <div className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                <div className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce"></div>
+              </div>
+              <span>Typing...</span>
+            </div>
           )}
           <div ref={messagesEndRef} />
         </div>
 
         {/* Input Area */}
-        <form onSubmit={handleSubmit} className="p-4 bg-white border-t border-gray-100 flex gap-2">
-          <input
-            type="text"
-            className="flex-1 border border-gray-300 rounded-full px-4 py-2 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-            placeholder="Type your message..."
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            disabled={isLoading}
-          />
-          <button
-            type="submit"
-            disabled={!input.trim() || isLoading}
-            className="bg-blue-600 text-white px-5 py-2 rounded-full font-medium hover:bg-blue-700 disabled:opacity-50 transition"
-          >
-            Send
-          </button>
-        </form>
+        <div className="p-4 bg-white/5 border-t border-white/10">
+          <form onSubmit={handleSubmit} className="flex gap-3 relative">
+            <input
+              type="text"
+              className="flex-1 bg-white/10 border border-white/10 rounded-full px-6 py-3.5 text-white placeholder-indigo-200/50 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 transition-all shadow-inner"
+              placeholder="Ask me anything..."
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              disabled={isLoading}
+            />
+            <button
+              type="submit"
+              disabled={!input.trim() || isLoading}
+              className="bg-indigo-500 text-white px-6 py-3.5 rounded-full font-medium hover:bg-indigo-400 disabled:opacity-50 disabled:hover:bg-indigo-500 transition-all shadow-lg flex items-center justify-center min-w-[100px]"
+            >
+              {isLoading ? (
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+              ) : (
+                "Send"
+              )}
+            </button>
+          </form>
+        </div>
 
       </div>
     </div>
