@@ -84,7 +84,7 @@ Keep answers concise and conversational — this is a chat interface, not an ess
 Context: ${ragResultText}`;
 
     // STEP 4 - Call Gemini 1.5 Flash (has a very generous free tier)
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash", systemInstruction: systemPrompt });
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest", systemInstruction: systemPrompt });
 
     // Include last 6 messages of history for context
     const recentHistory = (history || []).slice(-6).map((m: any) => ({
