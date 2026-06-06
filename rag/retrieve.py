@@ -1,7 +1,7 @@
 import google.generativeai as genai
 from typing import Dict, Any
 
-from .config import supabase
+from config import supabase
 
 def query_rag(question: str) -> Dict[str, Any]:
     """

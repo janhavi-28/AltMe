@@ -7,7 +7,7 @@ import base64
 import google.generativeai as genai
 from typing import List, Dict, Any
 
-from .config import supabase, GITHUB_USERNAME, RESUME_PDF_PATH, BIO_YAML_PATH
+from config import supabase, GITHUB_USERNAME, RESUME_PDF_PATH, BIO_YAML_PATH
 
 # Initialize tokenizer for chunking
 tokenizer = tiktoken.get_encoding("cl100k_base")
