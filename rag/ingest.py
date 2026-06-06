@@ -153,15 +153,22 @@ def embed_and_store(docs: List[Dict[str, Any]]):
     # The generativeai SDK supports batching by passing a list of texts
     texts = [doc["text"] for doc in docs]
     
-    # Use gemini-embedding-2
+    # Use gemini-embedding-2 with 768 dimensions and rate limiting
+    import time
+    embeddings = []
     try:
-        response = genai.embed_content(
-            model="models/gemini-embedding-2",
-            content=texts,
-            task_type="retrieval_document"
-        )
-        embeddings = response['embedding']
-        
+        # Process in smaller batches to avoid 100 req/min quota
+        for i in range(0, len(texts), 10):
+            batch = texts[i:i+10]
+            response = genai.embed_content(
+                model="models/gemini-embedding-2",
+                content=batch,
+                task_type="retrieval_document",
+                output_dimensionality=768
+            )
+            embeddings.extend(response['embedding'])
+            time.sleep(6) # Sleep 6 seconds per 10 requests to stay under 100 per minute
+            
         # Prepare data for Supabase
         records = []
         for i, doc in enumerate(docs):

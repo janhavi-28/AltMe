@@ -16,7 +16,8 @@ def query_rag(question: str) -> Dict[str, Any]:
         response = genai.embed_content(
             model="models/gemini-embedding-2",
             content=question,
-            task_type="retrieval_query"
+            task_type="retrieval_query",
+            output_dimensionality=768
         )
         query_embedding = response['embedding']
     except Exception as e:
