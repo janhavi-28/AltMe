@@ -19,56 +19,44 @@ export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [showCalendar, setShowCalendar] = useState(false);
+  const [showBookingCard, setShowBookingCard] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim() || isLoading) return;
+  const sendQuery = async (userMessage: string) => {
+    if (!userMessage.trim() || isLoading) return;
 
-    const userMessage = input.trim();
     const newMessages: Message[] = [...messages, { role: "user", content: userMessage }];
     setMessages(newMessages);
     setInput("");
     setIsLoading(true);
-    setShowCalendar(false);
+    setShowBookingCard(false);
 
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages: messages, // Send history
+          messages: messages,
           userMessage: userMessage
         })
       });
 
-      if (!res.ok) {
-        throw new Error("API request failed");
-      }
+      if (!res.ok) throw new Error("API request failed");
 
-      // Parse custom sources header
       const sourcesHeader = res.headers.get("X-Sources");
       let parsedSources: Source[] = [];
       if (sourcesHeader) {
-        try {
-          parsedSources = JSON.parse(sourcesHeader);
-        } catch (e) {
-          console.error("Failed to parse sources", e);
-        }
+        try { parsedSources = JSON.parse(sourcesHeader); } catch (e) {}
       }
 
-      // Handle streaming text
       const reader = res.body?.getReader();
       const decoder = new TextDecoder();
       let assistantResponse = "";
 
-      // Add a placeholder message for the assistant
       setMessages((prev) => [...prev, { role: "assistant", content: "", sources: parsedSources }]);
 
       if (reader) {
@@ -78,13 +66,16 @@ export default function ChatPage() {
           const chunkText = decoder.decode(value, { stream: true });
           assistantResponse += chunkText;
 
-          // Update the last message
           setMessages((prev) => {
             const updated = [...prev];
             updated[updated.length - 1].content = assistantResponse;
             return updated;
           });
         }
+      }
+
+      if (shouldShowBooking(assistantResponse)) {
+        setShowBookingCard(true);
       }
 
     } catch (error) {
@@ -98,13 +89,17 @@ export default function ChatPage() {
     }
   };
 
-  // Helper to format source citations
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await sendQuery(input);
+  };
+
   const renderSources = (sources: Source[]) => {
     if (!sources || sources.length === 0) return null;
     return (
-      <div className="mt-2 text-xs text-gray-500 flex flex-wrap gap-2">
+      <div className="mt-3 flex flex-wrap gap-2">
         {sources.map((s, idx) => (
-          <span key={idx} className="bg-gray-100 px-2 py-1 rounded-md border border-gray-200">
+          <span key={idx} className="bg-[#13131a] text-gray-400 text-xs px-2.5 py-1 rounded-full border border-white/5 flex items-center gap-1">
             {s.source_type === "resume" && "📄 Resume"}
             {s.source_type === "github" && `💻 github.com/${s.repo_name}`}
             {s.source_type === "bio" && "👤 Bio"}
@@ -114,114 +109,160 @@ export default function ChatPage() {
     );
   };
 
-  // Helper to check if we should show a booking button
   const shouldShowBooking = (text: string) => {
     const lower = text.toLowerCase();
-    return lower.includes("book") || lower.includes("schedule") || lower.includes("meeting") || lower.includes("call");
+    return lower.includes("book") || lower.includes("schedule") || lower.includes("meeting") || lower.includes("call") || lower.includes("interview");
   };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 flex flex-col items-center justify-center p-4 sm:p-6 md:p-8">
-      
-      {/* Background decorations */}
-      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-indigo-600/20 blur-[120px]"></div>
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-purple-600/20 blur-[120px]"></div>
-      </div>
+  const suggestedQuestions = [
+    "Why should we hire you?",
+    "Tell me about your projects",
+    "Book a call with Janhavi"
+  ];
 
-      <div className="w-full max-w-3xl bg-white/10 backdrop-blur-2xl rounded-3xl shadow-[0_8px_32px_0_rgba(0,0,0,0.36)] flex flex-col h-[85vh] overflow-hidden border border-white/10 relative z-10 transition-all duration-300">
-        
-        {/* Header */}
-        <div className="bg-white/5 border-b border-white/10 p-5 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold text-lg shadow-lg">
-                J
+  return (
+    <div className="h-screen flex flex-col font-sans" style={{ backgroundColor: "#0a0a0f" }}>
+      <style dangerouslySetInnerHTML={{__html: `
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+          animation: fadeIn 0.3s ease-out forwards;
+        }
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+        .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+      `}} />
+      
+      {/* Header */}
+      <header className="flex-none px-6 py-4 flex items-center justify-between border-b border-white/5 bg-[#0a0a0f] z-10 shadow-sm">
+        <div className="text-xl font-bold bg-gradient-to-r from-[#7c3aed] to-[#4f46e5] bg-clip-text text-transparent">
+          AltMe
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="relative flex h-2.5 w-2.5">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
+          </div>
+          <span className="text-gray-300 text-sm font-medium">Online</span>
+        </div>
+      </header>
+
+      {/* Main Chat Area */}
+      <div className="flex-1 overflow-y-auto scrollbar-hide relative pb-4">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 w-full pt-8 sm:pt-12">
+          
+          {messages.length === 0 && (
+            <div className="flex flex-col items-center justify-center pt-10 pb-8 animate-fade-in text-center">
+              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-[#7c3aed] to-[#4f46e5] flex items-center justify-center text-white text-3xl font-bold shadow-lg shadow-[#7c3aed]/20 mb-6 border border-white/10">
+                JK
               </div>
-              <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-400 border-2 border-indigo-950 rounded-full"></div>
+              <h1 className="text-white font-bold text-2xl mb-2">Janhavi Kolekar</h1>
+              <p className="text-gray-400 text-sm mb-6">AI / ML Engineer • GenAI & LLM Applications</p>
+              
+              <div className="flex flex-wrap justify-center gap-3 mb-8">
+                <span className="px-4 py-1.5 rounded-full bg-[#7c3aed]/10 text-[#a78bfa] text-xs font-medium border border-[#7c3aed]/20">LangGraph</span>
+                <span className="px-4 py-1.5 rounded-full bg-[#7c3aed]/10 text-[#a78bfa] text-xs font-medium border border-[#7c3aed]/20">RAG Systems</span>
+                <span className="px-4 py-1.5 rounded-full bg-[#7c3aed]/10 text-[#a78bfa] text-xs font-medium border border-[#7c3aed]/20">Voice Agents</span>
+              </div>
+              
+              <p className="text-gray-500 text-sm">Ask me anything about my background, projects, or book a call</p>
             </div>
-            <div>
-              <h1 className="text-white font-semibold tracking-wide text-lg">Janhavi's AI Representative</h1>
-              <p className="text-indigo-200/70 text-xs font-medium">Always online</p>
-            </div>
+          )}
+
+          <div className="space-y-6">
+            {messages.map((m, idx) => (
+              <div key={idx} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"} animate-fade-in`}>
+                
+                {m.role === "assistant" && (
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#7c3aed] to-[#4f46e5] flex-shrink-0 flex items-center justify-center text-white text-xs font-bold mr-3 mt-1 shadow-sm">
+                    JK
+                  </div>
+                )}
+                
+                <div className="max-w-[85%]">
+                  <div
+                    className={`px-5 py-3.5 rounded-2xl text-[15px] leading-relaxed shadow-sm ${
+                      m.role === "user" 
+                      ? "bg-gradient-to-r from-[#7c3aed] to-[#4f46e5] text-white rounded-br-sm" 
+                      : "bg-[#1e1e2e] text-gray-200 border border-white/5 rounded-bl-sm"
+                    }`}
+                    style={{ whiteSpace: "pre-wrap" }}
+                  >
+                    {m.content}
+                  </div>
+                  
+                  {m.role === "assistant" && renderSources(m.sources || [])}
+                </div>
+              </div>
+            ))}
+
+            {isLoading && (
+              <div className="flex justify-start animate-fade-in">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#7c3aed] to-[#4f46e5] flex-shrink-0 flex items-center justify-center text-white text-xs font-bold mr-3 mt-1 shadow-sm">
+                  JK
+                </div>
+                <div className="bg-[#1e1e2e] border border-white/5 rounded-2xl rounded-bl-sm px-5 py-4 flex items-center gap-1.5 h-[50px]">
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                </div>
+              </div>
+            )}
+            <div ref={messagesEndRef} className="h-4" />
           </div>
         </div>
+      </div>
 
-        {/* Chat Area */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
-          {messages.length === 0 && (
-            <div className="flex flex-col items-center justify-center h-full text-center space-y-4 animate-fade-in-up">
-              <div className="w-20 h-20 rounded-full bg-indigo-500/20 flex items-center justify-center mb-2">
-                <span className="text-4xl">✨</span>
-              </div>
-              <h2 className="text-2xl font-bold text-white tracking-tight">Say Hello!</h2>
-              <p className="text-indigo-200/80 max-w-md">
-                I'm Janhavi's AI assistant. You can ask me about her skills, experience, recent projects, or even book a quick call.
-              </p>
-            </div>
-          )}
-
-          {messages.map((m, idx) => (
-            <div key={idx} className={`flex flex-col ${m.role === "user" ? "items-end" : "items-start"} animate-fade-in`}>
-              <div
-                className={`max-w-[85%] px-5 py-3.5 rounded-2xl text-[15px] leading-relaxed shadow-sm ${
-                  m.role === "user" 
-                  ? "bg-gradient-to-r from-indigo-500 to-indigo-600 text-white rounded-br-sm" 
-                  : "bg-white/10 text-gray-100 rounded-bl-sm border border-white/5"
-                }`}
-                style={{ whiteSpace: "pre-wrap" }}
+      {/* Input Area */}
+      <div className="flex-none bg-[#0a0a0f] border-t border-white/5 p-4 z-20">
+        <div className="max-w-3xl mx-auto w-full relative">
+          
+          {/* Booking Card */}
+          {showBookingCard && (
+            <div className="absolute bottom-[calc(100%+16px)] left-0 right-0 sm:left-auto sm:w-[350px] bg-[#13131a] border border-[#7c3aed]/30 rounded-2xl p-5 shadow-2xl shadow-black/80 animate-fade-in z-50">
+              <button onClick={() => setShowBookingCard(false)} className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+              </button>
+              <h3 className="text-white font-bold text-lg mb-1 flex items-center gap-2">📅 Book an Interview</h3>
+              <p className="text-gray-400 text-sm mb-5">30 min • Google Meet</p>
+              <a 
+                href={process.env.NEXT_PUBLIC_CAL_URL || "https://cal.com/janhavi-kolekar/interview"}
+                target="_blank"
+                rel="noopener noreferrer" 
+                className="w-full inline-flex justify-center items-center bg-teal-500 hover:bg-teal-400 text-white font-semibold py-2.5 px-6 rounded-xl transition-colors shadow-lg shadow-teal-500/20"
+                onClick={() => setShowBookingCard(false)}
               >
-                {m.content}
-              </div>
-
-              {/* Citations below assistant message */}
-              {m.role === "assistant" && renderSources(m.sources || [])}
-
-              {/* Booking Button Injection */}
-              {m.role === "assistant" && shouldShowBooking(m.content) && idx === messages.length - 1 && !isLoading && (
-                <div className="mt-4 animate-bounce-in">
-                  <button 
-                    onClick={() => setShowCalendar(!showCalendar)}
-                    className="bg-white/10 hover:bg-white/20 text-white border border-white/20 text-sm px-5 py-2.5 rounded-xl font-medium transition-all duration-200 flex items-center gap-2"
-                  >
-                    <span>{showCalendar ? "✕ Close Calendar" : "📅 Find a Time"}</span>
-                  </button>
-                </div>
-              )}
-            </div>
-          ))}
-
-          {/* Cal.com Inline Embed */}
-          {showCalendar && (
-            <div className="w-full h-[450px] mt-4 border border-white/10 rounded-2xl overflow-hidden bg-white/5 animate-fade-in">
-              <iframe 
-                src={process.env.NEXT_PUBLIC_CAL_URL || "https://cal.com/janhavi-kolekar/interview"} 
-                className="w-full h-full"
-                title="Book a call"
-              />
+                Schedule Now
+              </a>
             </div>
           )}
 
-          {isLoading && (
-            <div className="flex items-start gap-2 text-indigo-200/60 text-sm pl-2">
-              <div className="flex space-x-1 mt-1.5">
-                <div className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-                <div className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-                <div className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce"></div>
-              </div>
-              <span>Typing...</span>
+          {/* Suggested Questions */}
+          {messages.length === 0 && (
+            <div className="flex flex-wrap gap-2 mb-4 justify-start animate-fade-in">
+              {suggestedQuestions.map((q, i) => (
+                <button
+                  key={i}
+                  onClick={() => sendQuery(q)}
+                  className="bg-[#1e1e2e] hover:bg-[#2a2a3e] border border-white/10 hover:border-[#7c3aed]/30 text-gray-300 text-sm px-4 py-2 rounded-full transition-all whitespace-nowrap"
+                >
+                  {q}
+                </button>
+              ))}
             </div>
           )}
-          <div ref={messagesEndRef} />
-        </div>
 
-        {/* Input Area */}
-        <div className="p-4 bg-white/5 border-t border-white/10">
-          <form onSubmit={handleSubmit} className="flex gap-3 relative">
+          <form onSubmit={handleSubmit} className="relative flex items-center">
             <input
               type="text"
-              className="flex-1 bg-white/10 border border-white/10 rounded-full px-6 py-3.5 text-white placeholder-indigo-200/50 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 transition-all shadow-inner"
-              placeholder="Ask me anything..."
+              className="w-full bg-[#13131a] border border-white/10 rounded-2xl pl-5 pr-14 py-4 text-white placeholder-gray-500 focus:outline-none focus:border-[#7c3aed]/50 focus:ring-1 focus:ring-[#7c3aed]/50 transition-all shadow-inner text-[15px]"
+              placeholder="Type your message..."
               value={input}
               onChange={(e) => setInput(e.target.value)}
               disabled={isLoading}
@@ -229,17 +270,19 @@ export default function ChatPage() {
             <button
               type="submit"
               disabled={!input.trim() || isLoading}
-              className="bg-indigo-500 text-white px-6 py-3.5 rounded-full font-medium hover:bg-indigo-400 disabled:opacity-50 disabled:hover:bg-indigo-500 transition-all shadow-lg flex items-center justify-center min-w-[100px]"
+              className="absolute right-2 top-1/2 -translate-y-1/2 bg-gradient-to-r from-[#7c3aed] to-[#4f46e5] text-white w-10 h-10 rounded-xl flex items-center justify-center hover:opacity-90 disabled:opacity-50 disabled:hover:opacity-50 transition-opacity"
             >
               {isLoading ? (
-                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
               ) : (
-                "Send"
+                <svg className="w-5 h-5 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
               )}
             </button>
           </form>
+          <div className="text-center mt-3">
+            <p className="text-[11px] text-gray-600 font-medium tracking-wide">AltMe AI • Answers may be inaccurate</p>
+          </div>
         </div>
-
       </div>
     </div>
   );
