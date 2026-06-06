@@ -83,8 +83,8 @@ Never break character.
 Keep answers concise and conversational — this is a chat interface, not an essay.
 Context: ${ragResultText}`;
 
-    // STEP 4 - Call Gemini 1.5 Flash (has a very generous free tier)
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest", systemInstruction: systemPrompt });
+    // STEP 4 - Call Gemini Flash Latest
+    const model = genAI.getGenerativeModel({ model: "gemini-flash-latest", systemInstruction: systemPrompt });
 
     // Include last 6 messages of history for context
     const recentHistory = (history || []).slice(-6).map((m: any) => ({
