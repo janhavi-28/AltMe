@@ -1,289 +1,373 @@
 "use client";
-
 import { useState, useRef, useEffect } from "react";
 
-type Source = {
-  id: number;
-  source_type: string;
-  repo_name?: string;
-  similarity?: number;
-};
-
-type Message = {
+interface Message {
   role: "user" | "assistant";
   content: string;
-  sources?: Source[];
-};
+  sources?: string[];
+}
 
-export default function ChatPage() {
+const SUGGESTED = [
+  "Why should we hire you?",
+  "Tell me about your projects",
+  "Book a call with Janhavi",
+];
+
+const BOOKING_KEYWORDS = ["book", "call", "schedule", "available", "interview", "meet", "slot"];
+
+export default function Home() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [showBookingCard, setShowBookingCard] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [loading, setLoading] = useState(false);
+  const [showBooking, setShowBooking] = useState(false);
+  const [showSuggested, setShowSuggested] = useState(true);
+  const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, loading]);
 
-  const sendQuery = async (userMessage: string) => {
-    if (!userMessage.trim() || isLoading) return;
+  const detectBooking = (text: string) =>
+    BOOKING_KEYWORDS.some((k) => text.toLowerCase().includes(k));
 
-    const newMessages: Message[] = [...messages, { role: "user", content: userMessage }];
-    setMessages(newMessages);
+  const send = async (text: string) => {
+    if (!text.trim()) return;
+    setShowSuggested(false);
+    if (detectBooking(text)) setShowBooking(true);
+
+    const userMsg: Message = { role: "user", content: text };
+    setMessages((prev) => [...prev, userMsg]);
     setInput("");
-    setIsLoading(true);
-    setShowBookingCard(false);
+    setLoading(true);
 
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: messages,
-          userMessage: userMessage
-        })
+        body: JSON.stringify({ message: text, history: messages }),
       });
 
-      if (!res.ok) throw new Error("API request failed");
-
       const sourcesHeader = res.headers.get("X-Sources");
-      let parsedSources: Source[] = [];
-      if (sourcesHeader) {
-        try { parsedSources = JSON.parse(sourcesHeader); } catch (e) {}
-      }
-
+      const sources = sourcesHeader ? JSON.parse(sourcesHeader) : [];
       const reader = res.body?.getReader();
       const decoder = new TextDecoder();
-      let assistantResponse = "";
+      let full = "";
 
-      setMessages((prev) => [...prev, { role: "assistant", content: "", sources: parsedSources }]);
+      setMessages((prev) => [...prev, { role: "assistant", content: "", sources }]);
 
       if (reader) {
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
-          const chunkText = decoder.decode(value, { stream: true });
-          assistantResponse += chunkText;
-
+          full += decoder.decode(value);
           setMessages((prev) => {
             const updated = [...prev];
-            updated[updated.length - 1].content = assistantResponse;
+            updated[updated.length - 1] = { role: "assistant", content: full, sources };
             return updated;
           });
         }
       }
-
-      if (shouldShowBooking(assistantResponse)) {
-        setShowBookingCard(true);
-      }
-
-    } catch (error) {
-      console.error(error);
+    } catch {
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: "Sorry, I encountered an error connecting to the server." }
+        { role: "assistant", content: "Sorry, something went wrong. Please try again." },
       ]);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    await sendQuery(input);
+  const sourceIcon = (s: string) => {
+    if (s?.includes("github")) return "💻";
+    if (s?.includes("resume")) return "📄";
+    return "👤";
   };
-
-  const renderSources = (sources: Source[]) => {
-    if (!sources || sources.length === 0) return null;
-    return (
-      <div className="mt-3 flex flex-wrap gap-2">
-        {sources.map((s, idx) => (
-          <span key={idx} className="bg-[#13131a] text-gray-400 text-xs px-2.5 py-1 rounded-full border border-white/5 flex items-center gap-1">
-            {s.source_type === "resume" && "📄 Resume"}
-            {s.source_type === "github" && `💻 github.com/${s.repo_name}`}
-            {s.source_type === "bio" && "👤 Bio"}
-          </span>
-        ))}
-      </div>
-    );
-  };
-
-  const shouldShowBooking = (text: string) => {
-    const lower = text.toLowerCase();
-    return lower.includes("book") || lower.includes("schedule") || lower.includes("meeting") || lower.includes("call") || lower.includes("interview");
-  };
-
-  const suggestedQuestions = [
-    "Why should we hire you?",
-    "Tell me about your projects",
-    "Book a call with Janhavi"
-  ];
 
   return (
-    <div className="h-screen flex flex-col font-sans" style={{ backgroundColor: "#0a0a0f" }}>
-      <style dangerouslySetInnerHTML={{__html: `
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-fade-in {
-          animation: fadeIn 0.3s ease-out forwards;
-        }
-        .scrollbar-hide::-webkit-scrollbar {
-          display: none;
-        }
-        .scrollbar-hide {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-      `}} />
-      
+    <div style={{
+      minHeight: "100vh",
+      background: "#080810",
+      color: "#e2e8f0",
+      fontFamily: "'DM Sans', 'Segoe UI', sans-serif",
+      display: "flex",
+      flexDirection: "column",
+    }}>
+
+      {/* Ambient background */}
+      <div style={{
+        position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0,
+        background: "radial-gradient(ellipse 80% 50% at 50% -20%, rgba(99,57,255,0.15) 0%, transparent 70%)",
+      }} />
+
       {/* Header */}
-      <header className="flex-none px-6 py-4 flex items-center justify-between border-b border-white/5 bg-[#0a0a0f] z-10 shadow-sm">
-        <div className="text-xl font-bold bg-gradient-to-r from-[#7c3aed] to-[#4f46e5] bg-clip-text text-transparent">
-          AltMe
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="relative flex h-2.5 w-2.5">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
-          </div>
-          <span className="text-gray-300 text-sm font-medium">Online</span>
+      <header style={{
+        position: "fixed", top: 0, left: 0, right: 0, zIndex: 50,
+        borderBottom: "1px solid rgba(255,255,255,0.06)",
+        background: "rgba(8,8,16,0.85)",
+        backdropFilter: "blur(12px)",
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "0 24px", height: "56px",
+      }}>
+        <span style={{
+          fontWeight: 700, fontSize: "18px", letterSpacing: "-0.5px",
+          background: "linear-gradient(135deg, #a78bfa, #6366f1)",
+          WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
+        }}>AltMe</span>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <span style={{
+            width: "8px", height: "8px", borderRadius: "50%",
+            background: "#22c55e",
+            boxShadow: "0 0 8px #22c55e",
+            animation: "pulse 2s infinite",
+          }} />
+          <span style={{ fontSize: "13px", color: "#94a3b8" }}>Online</span>
         </div>
       </header>
 
-      {/* Main Chat Area */}
-      <div className="flex-1 overflow-y-auto scrollbar-hide relative pb-4">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 w-full pt-8 sm:pt-12">
-          
+      {/* Chat area */}
+      <main style={{
+        flex: 1, overflowY: "auto", paddingTop: "72px",
+        paddingBottom: showBooking ? "220px" : "120px",
+        position: "relative", zIndex: 1,
+      }}>
+        <div style={{ maxWidth: "720px", margin: "0 auto", padding: "0 16px" }}>
+
+          {/* Hero — shown before first message */}
           {messages.length === 0 && (
-            <div className="flex flex-col items-center justify-center pt-10 pb-8 animate-fade-in text-center">
-              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-[#7c3aed] to-[#4f46e5] flex items-center justify-center text-white text-3xl font-bold shadow-lg shadow-[#7c3aed]/20 mb-6 border border-white/10">
-                JK
+            <div style={{
+              display: "flex", flexDirection: "column", alignItems: "center",
+              paddingTop: "60px", paddingBottom: "40px", textAlign: "center",
+              animation: "fadeIn 0.5s ease",
+            }}>
+              {/* Avatar */}
+              <div style={{
+                width: "80px", height: "80px", borderRadius: "50%",
+                background: "linear-gradient(135deg, #7c3aed, #4f46e5)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: "28px", fontWeight: 700, color: "white",
+                boxShadow: "0 0 40px rgba(124,58,237,0.4)",
+                marginBottom: "20px",
+              }}>JK</div>
+
+              <h1 style={{ fontSize: "26px", fontWeight: 700, margin: "0 0 6px", letterSpacing: "-0.5px" }}>
+                Janhavi Kolekar
+              </h1>
+              <p style={{ fontSize: "14px", color: "#94a3b8", margin: "0 0 16px" }}>
+                AI / ML Engineer • GenAI & LLM Applications
+              </p>
+
+              {/* Skill badges */}
+              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", justifyContent: "center", marginBottom: "20px" }}>
+                {["LangGraph", "RAG Systems", "Voice Agents", "FastAPI", "Gemini"].map((s) => (
+                  <span key={s} style={{
+                    padding: "4px 12px", borderRadius: "20px", fontSize: "12px",
+                    background: "rgba(124,58,237,0.15)", border: "1px solid rgba(124,58,237,0.3)",
+                    color: "#a78bfa",
+                  }}>{s}</span>
+                ))}
               </div>
-              <h1 className="text-white font-bold text-2xl mb-2">Janhavi Kolekar</h1>
-              <p className="text-gray-400 text-sm mb-6">AI / ML Engineer • GenAI & LLM Applications</p>
-              
-              <div className="flex flex-wrap justify-center gap-3 mb-8">
-                <span className="px-4 py-1.5 rounded-full bg-[#7c3aed]/10 text-[#a78bfa] text-xs font-medium border border-[#7c3aed]/20">LangGraph</span>
-                <span className="px-4 py-1.5 rounded-full bg-[#7c3aed]/10 text-[#a78bfa] text-xs font-medium border border-[#7c3aed]/20">RAG Systems</span>
-                <span className="px-4 py-1.5 rounded-full bg-[#7c3aed]/10 text-[#a78bfa] text-xs font-medium border border-[#7c3aed]/20">Voice Agents</span>
-              </div>
-              
-              <p className="text-gray-500 text-sm">Ask me anything about my background, projects, or book a call</p>
+
+              <p style={{ fontSize: "14px", color: "#64748b", maxWidth: "380px" }}>
+                Ask me anything about Janhavi's background, projects, or book a 15-min call
+              </p>
             </div>
           )}
 
-          <div className="space-y-6">
-            {messages.map((m, idx) => (
-              <div key={idx} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"} animate-fade-in`}>
-                
-                {m.role === "assistant" && (
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#7c3aed] to-[#4f46e5] flex-shrink-0 flex items-center justify-center text-white text-xs font-bold mr-3 mt-1 shadow-sm">
-                    JK
+          {/* Messages */}
+          {messages.map((msg, i) => (
+            <div key={i} style={{
+              display: "flex",
+              flexDirection: msg.role === "user" ? "row-reverse" : "row",
+              alignItems: "flex-start", gap: "10px",
+              marginBottom: "20px",
+              animation: "fadeIn 0.3s ease",
+            }}>
+              {/* Avatar for assistant */}
+              {msg.role === "assistant" && (
+                <div style={{
+                  width: "32px", height: "32px", borderRadius: "50%", flexShrink: 0,
+                  background: "linear-gradient(135deg, #7c3aed, #4f46e5)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: "12px", fontWeight: 700, color: "white",
+                }}>JK</div>
+              )}
+
+              <div style={{ maxWidth: "80%", display: "flex", flexDirection: "column", gap: "6px",
+                alignItems: msg.role === "user" ? "flex-end" : "flex-start" }}>
+                <div style={{
+                  padding: "12px 16px", borderRadius: msg.role === "user" ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
+                  background: msg.role === "user"
+                    ? "linear-gradient(135deg, #7c3aed, #4f46e5)"
+                    : "rgba(255,255,255,0.05)",
+                  border: msg.role === "assistant" ? "1px solid rgba(255,255,255,0.08)" : "none",
+                  fontSize: "14px", lineHeight: "1.6", color: "#e2e8f0",
+                  whiteSpace: "pre-wrap",
+                }}>
+                  {msg.content}
+                </div>
+
+                {/* Source pills */}
+                {msg.sources && msg.sources.length > 0 && (
+                  <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                    {msg.sources.map((s, j) => (
+                      <span key={j} style={{
+                        padding: "2px 8px", borderRadius: "10px", fontSize: "11px",
+                        background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)",
+                        color: "#64748b",
+                      }}>{sourceIcon(s)} {s}</span>
+                    ))}
                   </div>
                 )}
-                
-                <div className="max-w-[85%]">
-                  <div
-                    className={`px-5 py-3.5 rounded-2xl text-[15px] leading-relaxed shadow-sm ${
-                      m.role === "user" 
-                      ? "bg-gradient-to-r from-[#7c3aed] to-[#4f46e5] text-white rounded-br-sm" 
-                      : "bg-[#1e1e2e] text-gray-200 border border-white/5 rounded-bl-sm"
-                    }`}
-                    style={{ whiteSpace: "pre-wrap" }}
-                  >
-                    {m.content}
-                  </div>
-                  
-                  {m.role === "assistant" && renderSources(m.sources || [])}
+              </div>
+            </div>
+          ))}
+
+          {/* Loading indicator */}
+          {loading && (
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "20px" }}>
+              <div style={{
+                width: "32px", height: "32px", borderRadius: "50%",
+                background: "linear-gradient(135deg, #7c3aed, #4f46e5)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: "12px", fontWeight: 700, color: "white",
+              }}>JK</div>
+              <div style={{
+                padding: "12px 16px", borderRadius: "18px 18px 18px 4px",
+                background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)",
+              }}>
+                <div style={{ display: "flex", gap: "4px" }}>
+                  {[0,1,2].map((i) => (
+                    <div key={i} style={{
+                      width: "6px", height: "6px", borderRadius: "50%",
+                      background: "#7c3aed",
+                      animation: `bounce 1s infinite ${i * 0.2}s`,
+                    }} />
+                  ))}
                 </div>
               </div>
-            ))}
-
-            {isLoading && (
-              <div className="flex justify-start animate-fade-in">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#7c3aed] to-[#4f46e5] flex-shrink-0 flex items-center justify-center text-white text-xs font-bold mr-3 mt-1 shadow-sm">
-                  JK
-                </div>
-                <div className="bg-[#1e1e2e] border border-white/5 rounded-2xl rounded-bl-sm px-5 py-4 flex items-center gap-1.5 h-[50px]">
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                </div>
-              </div>
-            )}
-            <div ref={messagesEndRef} className="h-4" />
-          </div>
-        </div>
-      </div>
-
-      {/* Input Area */}
-      <div className="flex-none bg-[#0a0a0f] border-t border-white/5 p-4 z-20">
-        <div className="max-w-3xl mx-auto w-full relative">
-          
-          {/* Booking Card */}
-          {showBookingCard && (
-            <div className="absolute bottom-[calc(100%+16px)] left-0 right-0 sm:left-auto sm:w-[350px] bg-[#13131a] border border-[#7c3aed]/30 rounded-2xl p-5 shadow-2xl shadow-black/80 animate-fade-in z-50">
-              <button onClick={() => setShowBookingCard(false)} className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-              </button>
-              <h3 className="text-white font-bold text-lg mb-1 flex items-center gap-2">📅 Book an Interview</h3>
-              <p className="text-gray-400 text-sm mb-5">30 min • Google Meet</p>
-              <a 
-                href={process.env.NEXT_PUBLIC_CAL_URL || "https://cal.com/janhavi-kolekar/interview"}
-                target="_blank"
-                rel="noopener noreferrer" 
-                className="w-full inline-flex justify-center items-center bg-teal-500 hover:bg-teal-400 text-white font-semibold py-2.5 px-6 rounded-xl transition-colors shadow-lg shadow-teal-500/20"
-                onClick={() => setShowBookingCard(false)}
-              >
-                Schedule Now
-              </a>
             </div>
           )}
 
-          {/* Suggested Questions */}
-          {messages.length === 0 && (
-            <div className="flex flex-wrap gap-2 mb-4 justify-start animate-fade-in">
-              {suggestedQuestions.map((q, i) => (
-                <button
-                  key={i}
-                  onClick={() => sendQuery(q)}
-                  className="bg-[#1e1e2e] hover:bg-[#2a2a3e] border border-white/10 hover:border-[#7c3aed]/30 text-gray-300 text-sm px-4 py-2 rounded-full transition-all whitespace-nowrap"
-                >
-                  {q}
-                </button>
+          <div ref={bottomRef} />
+        </div>
+      </main>
+
+      {/* Booking card */}
+      {showBooking && (
+        <div style={{
+          position: "fixed", bottom: "110px", left: "50%", transform: "translateX(-50%)",
+          width: "min(480px, calc(100vw - 32px))",
+          background: "rgba(13,13,25,0.95)", border: "1px solid rgba(99,57,255,0.3)",
+          borderRadius: "16px", padding: "16px 20px", zIndex: 40,
+          backdropFilter: "blur(12px)",
+          boxShadow: "0 0 40px rgba(99,57,255,0.15)",
+          animation: "slideUp 0.3s ease",
+        }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+            <div>
+              <div style={{ fontSize: "15px", fontWeight: 600, marginBottom: "4px" }}>
+                📅 Book a 15-min Interview
+              </div>
+              <div style={{ fontSize: "13px", color: "#94a3b8" }}>
+                15 min • Google Meet • Janhavi Kolekar
+              </div>
+            </div>
+            <button onClick={() => setShowBooking(false)} style={{
+              background: "none", border: "none", color: "#64748b",
+              cursor: "pointer", fontSize: "18px", lineHeight: 1,
+            }}>×</button>
+          </div>
+          <button
+            onClick={() => window.open(process.env.NEXT_PUBLIC_CAL_URL || "https://cal.com/janhavi-kolekar/interview", "_blank")}
+            style={{
+              marginTop: "12px", width: "100%", padding: "10px",
+              borderRadius: "10px", border: "none", cursor: "pointer",
+              background: "linear-gradient(135deg, #7c3aed, #4f46e5)",
+              color: "white", fontWeight: 600, fontSize: "14px",
+            }}>
+            Schedule Now →
+          </button>
+        </div>
+      )}
+
+      {/* Input area */}
+      <div style={{
+        position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 40,
+        background: "rgba(8,8,16,0.95)", backdropFilter: "blur(12px)",
+        borderTop: "1px solid rgba(255,255,255,0.06)",
+        padding: "12px 16px 20px",
+      }}>
+        <div style={{ maxWidth: "720px", margin: "0 auto" }}>
+
+          {/* Suggested chips */}
+          {showSuggested && (
+            <div style={{ display: "flex", gap: "8px", marginBottom: "10px", flexWrap: "wrap" }}>
+              {SUGGESTED.map((s) => (
+                <button key={s} onClick={() => send(s)} style={{
+                  padding: "6px 14px", borderRadius: "20px", fontSize: "13px",
+                  background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)",
+                  color: "#94a3b8", cursor: "pointer", whiteSpace: "nowrap",
+                  transition: "all 0.2s",
+                }}
+                  onMouseEnter={(e) => {
+                    (e.target as HTMLElement).style.background = "rgba(124,58,237,0.2)";
+                    (e.target as HTMLElement).style.borderColor = "rgba(124,58,237,0.4)";
+                    (e.target as HTMLElement).style.color = "#a78bfa";
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.target as HTMLElement).style.background = "rgba(255,255,255,0.05)";
+                    (e.target as HTMLElement).style.borderColor = "rgba(255,255,255,0.1)";
+                    (e.target as HTMLElement).style.color = "#94a3b8";
+                  }}
+                >{s}</button>
               ))}
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="relative flex items-center">
+          {/* Input row */}
+          <div style={{ display: "flex", gap: "8px" }}>
             <input
-              type="text"
-              className="w-full bg-[#13131a] border border-white/10 rounded-2xl pl-5 pr-14 py-4 text-white placeholder-gray-500 focus:outline-none focus:border-[#7c3aed]/50 focus:ring-1 focus:ring-[#7c3aed]/50 transition-all shadow-inner text-[15px]"
-              placeholder="Type your message..."
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              disabled={isLoading}
+              onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && send(input)}
+              placeholder="Ask me anything..."
+              style={{
+                flex: 1, padding: "12px 16px", borderRadius: "12px",
+                background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)",
+                color: "#e2e8f0", fontSize: "14px", outline: "none",
+              }}
+              onFocus={(e) => (e.target.style.borderColor = "rgba(124,58,237,0.6)")}
+              onBlur={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.1)")}
             />
             <button
-              type="submit"
-              disabled={!input.trim() || isLoading}
-              className="absolute right-2 top-1/2 -translate-y-1/2 bg-gradient-to-r from-[#7c3aed] to-[#4f46e5] text-white w-10 h-10 rounded-xl flex items-center justify-center hover:opacity-90 disabled:opacity-50 disabled:hover:opacity-50 transition-opacity"
-            >
-              {isLoading ? (
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-              ) : (
-                <svg className="w-5 h-5 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
-              )}
-            </button>
-          </form>
-          <div className="text-center mt-3">
-            <p className="text-[11px] text-gray-600 font-medium tracking-wide">AltMe AI • Answers may be inaccurate</p>
+              onClick={() => send(input)}
+              disabled={loading || !input.trim()}
+              style={{
+                padding: "12px 20px", borderRadius: "12px", border: "none",
+                background: loading || !input.trim()
+                  ? "rgba(124,58,237,0.3)"
+                  : "linear-gradient(135deg, #7c3aed, #4f46e5)",
+                color: "white", cursor: loading || !input.trim() ? "not-allowed" : "pointer",
+                fontSize: "16px", fontWeight: 600, transition: "all 0.2s",
+              }}>→</button>
           </div>
+          <p style={{ textAlign: "center", fontSize: "11px", color: "#374151", marginTop: "8px" }}>
+            AltMe AI • Answers may be inaccurate
+          </p>
         </div>
       </div>
+
+      <style>{`
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideUp { from { opacity: 0; transform: translateX(-50%) translateY(10px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+        @keyframes bounce { 0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; } 40% { transform: scale(1.2); opacity: 1; } }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: #080810; }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(124,58,237,0.3); border-radius: 4px; }
+      `}</style>
     </div>
   );
 }

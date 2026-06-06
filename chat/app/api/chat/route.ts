@@ -1,54 +1,72 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-// Initialize Gemini SDK
+export const runtime = 'edge';
+
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
-// Basic check for prompt injections
 const PROMPT_INJECTION_KEYWORDS = [
-  "ignore previous instructions",
+  "ignore previous",
   "you are now",
   "pretend to be",
-  "system prompt",
-  "forget everything"
+  "forget your instructions",
+  "new persona",
+  "act as",
+  "jailbreak"
 ];
+
+const BOOKING_KEYWORDS = ["book", "call", "schedule", "available", "interview", "meet", "slot"];
 
 export async function POST(req: Request) {
   try {
-    const { messages, userMessage } = await req.json();
+    const { message, history } = await req.json();
 
-    if (!userMessage) {
+    if (!message) {
       return new Response("Missing user message", { status: 400 });
     }
 
-    // 1. Guardrails Check
-    const lowerMessage = userMessage.toLowerCase();
+    // STEP 1 - Prompt injection check
+    const lowerMessage = message.toLowerCase();
     const isInjected = PROMPT_INJECTION_KEYWORDS.some(keyword => lowerMessage.includes(keyword));
     
     if (isInjected) {
-      return new Response("I'm Janhavi's AI rep and I'll stay that way 😊", {
+      const stream = new ReadableStream({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode("I'm Janhavi's AI rep and I'll stay that way 😊 Is there something about her background I can help with?"));
+          controller.close();
+        }
+      });
+      return new Response(stream, {
         headers: {
-          "Content-Type": "text/plain",
+          "Content-Type": "text/plain; charset=utf-8",
           "X-Sources": JSON.stringify([])
         }
       });
     }
 
-    // 2. Fetch RAG Context from the Python backend
+    // STEP 2 - Call RAG backend
     const ragApiUrl = process.env.RAG_API_URL || "http://localhost:8000/query";
     let ragResultText = "";
-    let ragSources = [];
+    let ragSources: string[] = [];
 
     try {
       const ragRes = await fetch(ragApiUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: userMessage })
+        body: JSON.stringify({ question: message })
       });
       
       if (ragRes.ok) {
         const ragData = await ragRes.json();
         ragResultText = ragData.answer || "";
-        ragSources = ragData.sources || [];
+        
+        // Map backend objects to strings for the frontend
+        if (ragData.sources && Array.isArray(ragData.sources)) {
+           ragSources = ragData.sources.map((s: any) => {
+             if (s.source_type === "github" && s.repo_name) return `github.com/${s.repo_name}`;
+             if (s.source_type) return s.source_type;
+             return JSON.stringify(s);
+           });
+        }
       } else {
         console.error("RAG API returned error:", await ragRes.text());
       }
@@ -56,36 +74,46 @@ export async function POST(req: Request) {
       console.error("Failed to reach RAG endpoint:", e);
     }
 
-    // 3. Build System Prompt & Call Gemini
-    const systemPrompt = `You are Janhavi's AI representative. Answer only using the context below. If the answer isn't in the context, say so. Never hallucinate. 
-    
-Context from knowledge base:
-${ragResultText}`;
+    // STEP 3 - Build system prompt
+    const systemPrompt = `You are AltMe, Janhavi Kolekar's AI representative.
+Answer ONLY using the context provided below.
+If the context does not contain the answer, say: 'I don't have that detail on hand, but you can reach Janhavi directly at janhavikolekar280@gmail.com'
+Never invent skills, experience, or facts.
+Never break character.
+Keep answers concise and conversational — this is a chat interface, not an essay.
+Context: ${ragResultText}`;
 
+    // STEP 4 - Call Gemini 2.0 Flash with streaming
     const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash", systemInstruction: systemPrompt });
 
-    // Format chat history for Gemini (excluding the current userMessage which we pass directly)
-    const formattedHistory = messages.map((m: any) => ({
+    // Include last 6 messages of history for context
+    const recentHistory = (history || []).slice(-6).map((m: any) => ({
       role: m.role === "user" ? "user" : "model",
       parts: [{ text: m.content }]
     }));
 
     const chat = model.startChat({
-      history: formattedHistory,
+      history: recentHistory,
     });
 
-    // Request streaming response
-    const resultStream = await chat.sendMessageStream(userMessage);
+    const resultStream = await chat.sendMessageStream(message);
 
-    // 4. Create standard Web Stream
+    // STEP 6 - Handle booking detection server-side
+    const shouldAppendBooking = BOOKING_KEYWORDS.some(k => lowerMessage.includes(k));
+    const bookingMessage = "\n\n📅 I can help book a 15-min call with Janhavi. Click the booking card below!";
+
     const stream = new ReadableStream({
       async start(controller) {
         try {
+          // Fix for the async iterator
           for await (const chunk of resultStream.stream) {
             const chunkText = chunk.text();
             if (chunkText) {
               controller.enqueue(new TextEncoder().encode(chunkText));
             }
+          }
+          if (shouldAppendBooking) {
+            controller.enqueue(new TextEncoder().encode(bookingMessage));
           }
           controller.close();
         } catch (err) {
@@ -94,7 +122,7 @@ ${ragResultText}`;
       }
     });
 
-    // 5. Return stream with Sources attached as a Header
+    // STEP 5 - Set response headers
     return new Response(stream, {
       headers: {
         "Content-Type": "text/plain; charset=utf-8",
