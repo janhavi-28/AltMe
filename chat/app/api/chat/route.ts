@@ -130,8 +130,8 @@ Context: ${ragResultText}`;
       }
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error("API Route Error:", error);
-    return new Response("Internal Server Error", { status: 500 });
+    return new Response(`API Route Error: ${error.message || error}`, { status: 500 });
   }
 }
