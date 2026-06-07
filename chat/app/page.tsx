@@ -280,7 +280,7 @@ export default function Home() {
             }}>×</button>
           </div>
           <button
-            onClick={() => window.open(process.env.NEXT_PUBLIC_CAL_URL || "https://cal.com/janhavi-kolekar/interview", "_blank")}
+            onClick={() => window.open(process.env.NEXT_PUBLIC_CAL_URL || "https://cal.com/janhavi-kolekar-niuycl/15min", "_blank")}
             style={{
               marginTop: "12px", width: "100%", padding: "10px",
               borderRadius: "10px", border: "none", cursor: "pointer",

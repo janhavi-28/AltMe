@@ -172,8 +172,10 @@ def embed_and_store(docs: List[Dict[str, Any]]):
         # Prepare data for Supabase
         records = []
         for i, doc in enumerate(docs):
+            # Postgres doesn't allow null bytes in text fields
+            clean_text = doc["text"].replace('\x00', '').replace('\u0000', '')
             records.append({
-                "content": doc["text"],
+                "content": clean_text,
                 "metadata": doc["metadata"],
                 "embedding": embeddings[i]
             })
